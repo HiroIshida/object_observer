@@ -1,5 +1,4 @@
 #include "ros/ros.h"
-#include "process.hpp"
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/filters/filter.h>
@@ -53,7 +52,7 @@ int main (int argc, char** argv)
 {
   ros::init(argc, argv, "projector");
   ros::NodeHandle nh;
-  ros::Subscriber sub = nh.subscribe("/core/multi_plane_extraction/output_nonplane_cloud", 10, callback);
+  ros::Subscriber sub = nh.subscribe("input", 10, callback);
   pub = nh.advertise<object_observer::Cloud>("output", 1);
   ros::spin();
 }

@@ -1,0 +1,20 @@
+<launch>
+  <arg name="input_cloud" default="/core/multi_plane_extraction/output"/>
+
+  <node name="transformer" pkg="nodelet" type="nodelet"
+        args="standalone jsk_pcl/TfTransformCloud"
+        output="screen">
+        <remap from="~input" to="$(arg input_cloud)"/>
+    <rosparam>
+      target_frame_id: base_link
+    </rosparam>
+  </node>
+
+
+  <node name="converter" pkg="object_observer" type="projector">
+    <remap from="output" to="vector_cloud"/>
+    <remap from="input" to="transformer/output"/>
+  </node>
+
+</launch>
+
