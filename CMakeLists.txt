@@ -12,7 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files(
   FILES
-  Projected.msg
+  Cloud.msg
   )
 
 generate_messages(
@@ -34,8 +34,8 @@ include_directories(
 
 include_directories(include ${catkin_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 #add_library(${PROJECT_NAME} src/projector.cpp)
-add_library(process SHARED src/process.cpp)
+#add_library(process SHARED src/process.cpp)
 add_executable(projector src/main.cpp)
-target_link_libraries(projector ${catkin_LIBRARIES} ${PCL_LIBRARIES} process)
+target_link_libraries(projector ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
 add_definitions(-std=c++11)
