@@ -1,38 +1,19 @@
 #!/usr/bin/env python
 
-from jsk_recognition_msgs.msg import BoundingBoxArray
-from geometry_msgs.msg import Point
+from object_observer.msg import *
 import rospy 
-from tf2_msgs.msg import TFMessage
-import tf
 import numpy as np
 
-class MyQueue:
-    def __init__(self, N):
-        self.N = N
-        self.data = [np.zeros(2) for n in range(N)]
+global cloud
+cloud = None
 
-    def push(self, elem):
-        tmp = self.data[1:self.N]
-        tmp.append(elem)
-        self.data = tmp
 
-    def mean(self):
-        s_est_lst = [np.mean(np.array([s[i] for s in self.data])) for i in range(2)]
-        return np.array(s_est_lst)
-
-br = tf.TransformBroadcaster()
-queue = MyQueue(5)
-pub = rospy.Publisher("/object_position", Point, queue_size = 1)
-
-def callback_tf(msg):
-    x, y = queue.mean()
-    z = 0.74
-    trans = [x, y, z]
-    rot = [0, 0, 0, 1]
-    br.sendTransform(tuple(trans), tuple(rot), rospy.Time.now(), "object", "base_footprint")
-    point_msg = Point(x = x, y = y, z = z)
-    pub.publish(point_msg)
+def callback_cloud(msg):
+    global cloud
+    X = np.array(msg.x_array.data)
+    Y = np.array(msg.y_array.data)
+    Z = np.array(msg.z_array.data)
+    cloud = np.vstack((X, Y, Z)).T
 
 def callback_bba(msg):
     boxes = msg.boxes
@@ -43,8 +24,16 @@ def callback_bba(msg):
         queue.push(pos2d)
 
 if __name__=='__main__':
-    rospy.init_node("coords_pub", anonymous = True)
-    sub = rospy.Subscriber('/tf', TFMessage, callback_tf)
-    sub = rospy.Subscriber('/core/boxes', BoundingBoxArray, callback_bba)
+    rospy.init_node("tmp", anonymous = True)
+    sub = rospy.Subscriber('/vector_cloud', Cloud, callback_cloud)
+    #sub = rospy.Subscriber('/core/boxes', BoundingBoxArray, callback_bba)
     rospy.spin()
+
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(cloud[:, 0], cloud[:, 1], cloud[:, 2])
+
+
 
