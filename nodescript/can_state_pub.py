@@ -7,6 +7,10 @@ from jsk_recognition_msgs.msg import *
 from copy import deepcopy
 import time
 import scipy.spatial
+from tf.transformations import quaternion_from_euler
+
+import utils
+   
 
 def box_filter(box, cloud, margin=0.0):
     size = box['size'] * (1 + margin)
@@ -28,9 +32,15 @@ def sequencial_box_filter(box_list, cloud, margin=0.0):
         cloud_remaining = cloud_remaining[~logical_indices, :]
     return cloud_decomposed_list
 
-def publish_object_state(cvhull2d):
+def publish_object_state(cvhull2d, cloud):
+    center = list(np.mean(cloud, axis=0))
+
     state = 'standing' if cvhull2d.area < 0.25 else 'falling'
     print(state)
+    if state is 'falling':
+        hull_points = cloud[:, 0:2][cvhull2d.vertices]
+        rect = utils.minimum_bounding_rectangle(hull_points)
+        print(rect)
 
 class ObjectObserver:
     def __init__(self):
@@ -65,6 +75,7 @@ class ObjectObserver:
             cloud_list = sequencial_box_filter(box_list, self.cloud, margin = 0.5)
             cvhull2d_list = [scipy.spatial.ConvexHull(X[:, 0:2]) for X in cloud_list]
             area_list = [cvhull2d.area for cvhull2d in cvhull2d_list]
+            self.cloud_list = cloud_list
 
             valid_idxes = []
             n_box = len(box_list)
@@ -77,7 +88,8 @@ class ObjectObserver:
 
             if len(valid_idxes)==1:
                 cvhull2d = cvhull2d_list[valid_idxes[0]]
-                publish_object_state(cvhull2d)
+                cloud = cloud_list[0]
+                publish_object_state(cvhull2d, cloud)
 
 if __name__=='__main__':
     rospy.init_node("tmp", anonymous = True)
