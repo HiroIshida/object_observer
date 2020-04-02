@@ -6,6 +6,7 @@ import numpy as np
 from jsk_recognition_msgs.msg import *
 from copy import deepcopy
 import time
+import scipy.spatial
 
 def box_filter(box, cloud):
     b_min = box['pos'] - box['size'] * 0.5
@@ -34,6 +35,7 @@ class ObjectObserver:
 
         # filed for debuggin
         self.cloud_list = None
+        self.cvhull_list = None
 
     def callback_cloud(self, msg):
         X = np.array(msg.x_array.data)
@@ -60,8 +62,17 @@ class ObjectObserver:
             return 
 
         cloud_list = sequencial_box_filter(box_list, self.cloud)
-        self.cloud_list = cloud_list
-        print(len(cloud_list))
+        cvhull_list = [scipy.spatial.ConvexHull(X) for X in cloud_list]
+        area_list = [cvhull.area for cvhull in cvhull_list]
+
+        valid_idxes = []
+        n_box = len(box_list)
+        for i in range(n_box):
+            if box_list[i]['pos'][2] < 0.9 and area_list[i] < 0.03:
+                valid_idxes.append(i)
+
+        print(valid_idxes)
+
         time.sleep(1.0)
 
 
