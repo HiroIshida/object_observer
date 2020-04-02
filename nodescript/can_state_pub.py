@@ -7,10 +7,13 @@ from jsk_recognition_msgs.msg import *
 from copy import deepcopy
 import time
 import scipy.spatial
+import tf
 from tf.transformations import quaternion_from_euler
 
 import utils
    
+
+br = tf.TransformBroadcaster()
 
 def box_filter(box, cloud, margin=0.0):
     size = box['size'] * (1 + margin)
@@ -40,7 +43,9 @@ def publish_object_state(cvhull2d, cloud):
     if state is 'falling':
         hull_points = cloud[:, 0:2][cvhull2d.vertices]
         rect = utils.minimum_bounding_rectangle(hull_points)
-        print(rect)
+        utils.get_rotation_angle(rect)
+    else:
+        br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
 
 class ObjectObserver:
     def __init__(self):
@@ -80,15 +85,17 @@ class ObjectObserver:
             valid_idxes = []
             n_box = len(box_list)
             for i in range(n_box):
+                print(area_list[i])
                 # falling
                 if box_list[i]['pos'][2] < 0.8 and area_list[i] < 0.6:
                     valid_idxes.append(i)
+                # standing
                 elif box_list[i]['pos'][2] < 0.9 and area_list[i] < 0.25:
                     valid_idxes.append(i)
 
             if len(valid_idxes)==1:
                 cvhull2d = cvhull2d_list[valid_idxes[0]]
-                cloud = cloud_list[0]
+                cloud = cloud_list[valid_idxes[0]]
                 publish_object_state(cvhull2d, cloud)
 
 if __name__=='__main__':
