@@ -4,19 +4,8 @@ from object_observer.msg import *
 import rospy 
 import numpy as np
 from jsk_recognition_msgs.msg import *
-
-global box
-global cloud
-cloud = None
-box = None
-
-
-def callback_cloud(msg):
-    global cloud
-    X = np.array(msg.x_array.data)
-    Y = np.array(msg.y_array.data)
-    Z = np.array(msg.z_array.data)
-    cloud = np.vstack((X, Y, Z)).T
+from copy import deepcopy
+import time
 
 def box_filter(box, cloud):
     b_min = box['pos'] - box['size'] * 0.5
@@ -28,46 +17,89 @@ def box_filter(box, cloud):
     logical = logical_x * logical_y * logical_z
     return logical
 
+def sequencial_box_filter(box_list, cloud):
+    cloud_decomposed_list = []
+    cloud_remaining = deepcopy(cloud)
+    for box in box_list:
+        logical_indices = box_filter(box, cloud_remaining)
+        cloud_decomposed_list.append(cloud_remaining[logical_indices, :]) 
+        cloud_remaining = cloud_remaining[~logical_indices, :]
+    return cloud_decomposed_list
 
-def callback_bba(msg):
-    print("hoge")
-    boxes_msg = msg.boxes
+class ObjectObserver:
+    def __init__(self):
+        self.cloud = None
+        self.sub1 = rospy.Subscriber('/vector_cloud', Cloud, self.callback_cloud)
+        self.sub2 = rospy.Subscriber('/core/boxes', BoundingBoxArray, self.callback_bba)
 
-    def boxmsg2box(boxmsg):
-        pose = boxmsg.pose
-        pos_, ori = pose.position, pose.orientation
-        dims = boxmsg.dimensions
-        pos = np.array([pos_.x, pos_.y, pos_.z])
-        size = np.array([dims.x, dims.y, dims.z])
-        box = {'pos': pos, 'size': size}
-        return box
-    box_list = map(boxmsg2box, boxes_msg)
+        # filed for debuggin
+        self.cloud_list = None
 
-    def predicate(box):
-        size2d = np.prod(box['size'][:2])
-        logical_size = (size2d < 0.01)
-        logical_height = (box['pos'][2] < 0.9)
-        return logical_size * logical_height
+    def callback_cloud(self, msg):
+        X = np.array(msg.x_array.data)
+        Y = np.array(msg.y_array.data)
+        Z = np.array(msg.z_array.data)
+        self.cloud = np.vstack((X, Y, Z)).T
 
-    box_filtered = filter(predicate, box_list)
-    print(len(box_filtered))
+    def callback_bba(self, msg):
+        boxes_msg = msg.boxes
+        if self.cloud_list is not None:
+            return
+
+        def boxmsg2box(boxmsg):
+            pose = boxmsg.pose
+            pos_, ori = pose.position, pose.orientation
+            dims = boxmsg.dimensions
+            pos = np.array([pos_.x, pos_.y, pos_.z])
+            size = np.array([dims.x, dims.y, dims.z])
+            box = {'pos': pos, 'size': size}
+            return box
+        box_list = map(boxmsg2box, boxes_msg)
+
+        if self.cloud is None:
+            return 
+
+        cloud_list = sequencial_box_filter(box_list, self.cloud)
+        self.cloud_list = cloud_list
+        print(len(cloud_list))
+        time.sleep(1.0)
+
+
+        '''
+        def get_size2d(box):
+            size2d = np.prod(box['size'][:2])
+            return size2d
+
+        def predicate(box):
+            logical_size = (get_size2d(box) < 0.01)
+            logical_height = (box['pos'][2] < 0.9)
+            return logical_size * logical_height
+        box_filtered = filter(predicate, box_list)
+        '''
+
+
+
+
+
 
 
 
 if __name__=='__main__':
     rospy.init_node("tmp", anonymous = True)
-    sub = rospy.Subscriber('/vector_cloud', Cloud, callback_cloud)
-    sub = rospy.Subscriber('/core/boxes', BoundingBoxArray, callback_bba)
+    oo = ObjectObserver()
     rospy.spin()
 
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    indices = box_filter(box, cloud)
-    cloud = cloud[indices, :]
 
-    ax.scatter(cloud[:, 0], cloud[:, 1], cloud[:, 2])
+    def show():
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        scat = lambda X, c: ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=c)
+        scat(oo.cloud_list[0], 'red')
+        scat(oo.cloud_list[1], 'blue')
+
+    show()
 
 
 
