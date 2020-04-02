@@ -87,6 +87,8 @@ class ObjectObserver:
                 cvhull2d = cvhull2d_list[valid_idxes[0]]
                 cloud = cloud_list[valid_idxes[0]]
                 self.publish_object_state_ifexist(cvhull2d, cloud)
+            else:
+                self.publish_object_state_ifnotexist()
 
     def publish_object_state_ifexist(self, cvhull2d, cloud):
         center = list(np.mean(cloud, axis=0))
@@ -103,6 +105,11 @@ class ObjectObserver:
             self.br.sendTransform(center, list(q), rospy.Time.now(), "can", "base_footprint")
         else:
             self.br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
+
+    def publish_object_state_ifnotexist(self):
+        text_status = OverlayText(text="missing")
+        self.pub_text.publish(text_status)
+
 
 if __name__=='__main__':
     rospy.init_node("tmp", anonymous = True)
