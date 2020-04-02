@@ -69,7 +69,7 @@ class ObjectObserver:
         valid_idxes = []
         n_box = len(box_list)
         for i in range(n_box):
-            if box_list[i]['pos'][2] < 0.9 and area_list[i] < 0.03:
+            if box_list[i]['pos'][2] < 0.95 and area_list[i] < 0.03:
                 valid_idxes.append(i)
 
         print(valid_idxes)
