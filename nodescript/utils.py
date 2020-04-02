@@ -1,4 +1,5 @@
 import numpy as np
+from math import *
 def minimum_bounding_rectangle(hull_points):
     """
     Find the smallest bounding rectangle for a set of points.
@@ -62,3 +63,23 @@ def minimum_bounding_rectangle(hull_points):
     rval[3] = np.dot([x1, y1], r)
 
     return rval
+
+def get_rotation_angle(rect):
+    vec1 = rect[1] - rect[0]
+    vec2 = rect[2] - rect[1]
+    l1 = np.linalg.norm(vec1)
+    l2 = np.linalg.norm(vec2)
+
+    vec1_normal = vec1/l1
+    vec2_normal = vec2/l2
+    if l1 < l2:
+        axis = vec2_normal
+    else:
+        axis = vec1_normal
+
+    theta = atan2(axis[1], axis[0]) % (pi/2)
+    return theta
+
+
+
+

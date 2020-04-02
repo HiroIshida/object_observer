@@ -43,7 +43,9 @@ def publish_object_state(cvhull2d, cloud):
     if state is 'falling':
         hull_points = cloud[:, 0:2][cvhull2d.vertices]
         rect = utils.minimum_bounding_rectangle(hull_points)
-        utils.get_rotation_angle(rect)
+        theta = utils.get_rotation_angle(rect)
+        q = quaternion_from_euler(0, 0, theta)
+        br.sendTransform(center, list(q), rospy.Time.now(), "can", "base_footprint")
     else:
         br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
 
@@ -85,7 +87,6 @@ class ObjectObserver:
             valid_idxes = []
             n_box = len(box_list)
             for i in range(n_box):
-                print(area_list[i])
                 # falling
                 if box_list[i]['pos'][2] < 0.8 and area_list[i] < 0.6:
                     valid_idxes.append(i)
