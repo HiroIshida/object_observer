@@ -4,15 +4,13 @@ from object_observer.msg import *
 import rospy 
 import numpy as np
 from jsk_recognition_msgs.msg import *
+from jsk_rviz_plugins.msg import * 
 from copy import deepcopy
 import time
 import scipy.spatial
 import tf
 from tf.transformations import quaternion_from_euler
-
 import utils
-   
-
 
 def box_filter(box, cloud, margin=0.0):
     size = box['size'] * (1 + margin)
@@ -40,6 +38,8 @@ class ObjectObserver:
         self.cloud = None
         self.sub1 = rospy.Subscriber('/vector_cloud', Cloud, self.callback_cloud)
         self.sub2 = rospy.Subscriber('/core/boxes', BoundingBoxArray, self.callback_bba)
+
+        self.pub_text = rospy.Publisher('object_status', OverlayText, queue_size=1)
 
         self.br = tf.TransformBroadcaster()
 
@@ -81,17 +81,20 @@ class ObjectObserver:
                 # standing
                 elif box_list[i]['pos'][2] < 0.9 and area_list[i] < 0.25:
                     valid_idxes.append(i)
+            existObject = len(valid_idxes)==1
 
-            if len(valid_idxes)==1:
+            if existObject:
                 cvhull2d = cvhull2d_list[valid_idxes[0]]
                 cloud = cloud_list[valid_idxes[0]]
-                self.publish_object_state(cvhull2d, cloud)
+                self.publish_object_state_ifexist(cvhull2d, cloud)
 
-    def publish_object_state(self, cvhull2d, cloud):
+    def publish_object_state_ifexist(self, cvhull2d, cloud):
         center = list(np.mean(cloud, axis=0))
 
         state = 'standing' if cvhull2d.area < 0.25 else 'falling'
-        print(state)
+        text_status = OverlayText(text=state)
+        self.pub_text.publish(text_status)
+
         if state is 'falling':
             hull_points = cloud[:, 0:2][cvhull2d.vertices]
             rect = utils.minimum_bounding_rectangle(hull_points)
