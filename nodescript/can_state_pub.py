@@ -28,9 +28,8 @@ def sequencial_box_filter(box_list, cloud, margin=0.0):
         cloud_remaining = cloud_remaining[~logical_indices, :]
     return cloud_decomposed_list
 
-def publish_object_state(cvhull):
-    print(cvhull.area)
-    state = 'standing' if cvhull.area < 0.01 else 'falling'
+def publish_object_state(cvhull2d):
+    state = 'standing' if cvhull2d.area < 0.25 else 'falling'
     print(state)
 
 class ObjectObserver:
@@ -41,7 +40,7 @@ class ObjectObserver:
 
         # filed for debuggin
         self.cloud_list = None
-        self.cvhull_list = None
+        self.cvhull2d_list = None
 
     def callback_cloud(self, msg):
         X = np.array(msg.x_array.data)
@@ -64,28 +63,21 @@ class ObjectObserver:
 
         if self.cloud is not None:
             cloud_list = sequencial_box_filter(box_list, self.cloud, margin = 0.5)
-            cvhull_list = [scipy.spatial.ConvexHull(X) for X in cloud_list]
-            area_list = [cvhull.area for cvhull in cvhull_list]
-
-            self.cloud_list = cloud_list
-            self.cvhull_list = cvhull_list
+            cvhull2d_list = [scipy.spatial.ConvexHull(X[:, 0:2]) for X in cloud_list]
+            area_list = [cvhull2d.area for cvhull2d in cvhull2d_list]
 
             valid_idxes = []
             n_box = len(box_list)
             for i in range(n_box):
-                if box_list[i]['pos'][2] < 0.95 and area_list[i] < 0.03:
+                # falling
+                if box_list[i]['pos'][2] < 0.8 and area_list[i] < 0.6:
+                    valid_idxes.append(i)
+                elif box_list[i]['pos'][2] < 0.9 and area_list[i] < 0.25:
                     valid_idxes.append(i)
 
             if len(valid_idxes)==1:
-                cvhull = cvhull_list[valid_idxes[0]]
-                publish_object_state(cvhull)
-
-
-
-
-
-
-
+                cvhull2d = cvhull2d_list[valid_idxes[0]]
+                publish_object_state(cvhull2d)
 
 if __name__=='__main__':
     rospy.init_node("tmp", anonymous = True)
@@ -102,7 +94,6 @@ if __name__=='__main__':
         scat(oo.cloud_list[0], 'red')
         scat(oo.cloud_list[1], 'blue')
 
-    show()
 
 
 
