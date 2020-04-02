@@ -10,7 +10,7 @@
     </rosparam>
   </node>
 
-
+  <node name="observer" pkg="object_observer" type="can_state_pub.py"/>
   <node name="converter" pkg="object_observer" type="projector">
     <remap from="output" to="vector_cloud"/>
     <remap from="input" to="transformer/output"/>
