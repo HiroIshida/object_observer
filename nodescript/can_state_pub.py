@@ -46,8 +46,6 @@ class ObjectObserver:
 
     def callback_bba(self, msg):
         boxes_msg = msg.boxes
-        if self.cloud_list is not None:
-            return
 
         def boxmsg2box(boxmsg):
             pose = boxmsg.pose
@@ -59,35 +57,18 @@ class ObjectObserver:
             return box
         box_list = map(boxmsg2box, boxes_msg)
 
-        if self.cloud is None:
-            return 
+        if self.cloud is not None:
+            cloud_list = sequencial_box_filter(box_list, self.cloud, margin = 0.5)
+            cvhull_list = [scipy.spatial.ConvexHull(X) for X in cloud_list]
+            area_list = [cvhull.area for cvhull in cvhull_list]
 
-        cloud_list = sequencial_box_filter(box_list, self.cloud, margin = 0.5)
-        cvhull_list = [scipy.spatial.ConvexHull(X) for X in cloud_list]
-        area_list = [cvhull.area for cvhull in cvhull_list]
+            valid_idxes = []
+            n_box = len(box_list)
+            for i in range(n_box):
+                if box_list[i]['pos'][2] < 0.95 and area_list[i] < 0.03:
+                    valid_idxes.append(i)
 
-        valid_idxes = []
-        n_box = len(box_list)
-        for i in range(n_box):
-            if box_list[i]['pos'][2] < 0.95 and area_list[i] < 0.03:
-                valid_idxes.append(i)
-
-        print(valid_idxes)
-
-        time.sleep(1.0)
-
-
-        '''
-        def get_size2d(box):
-            size2d = np.prod(box['size'][:2])
-            return size2d
-
-        def predicate(box):
-            logical_size = (get_size2d(box) < 0.01)
-            logical_height = (box['pos'][2] < 0.9)
-            return logical_size * logical_height
-        box_filtered = filter(predicate, box_list)
-        '''
+            print(valid_idxes)
 
 
 
