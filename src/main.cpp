@@ -22,7 +22,15 @@ void callback (const sensor_msgs::PointCloud2ConstPtr& msg_input)
   // tutorial in Japanese is wrong (using depricated header)  
   pcl::PointCloud<pcl::PointXYZ> cloud;
   pcl::fromROSMsg(*msg_input, cloud); 
-  std::cout<<"hoge"<<std::endl;
+  std::vector<std::vector<float>> vec_cloud;
+  for(int i=0; i< cloud.points.size(); i++){
+    std::vector<float> vec{ 
+      cloud.points[i].x,
+      cloud.points[i].y,
+      cloud.points[i].z};
+    vec_cloud.push_back(vec);
+  }
+
 }
 
 int main (int argc, char** argv)
