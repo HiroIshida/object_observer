@@ -13,7 +13,6 @@ from tf.transformations import quaternion_from_euler
 import utils
    
 
-br = tf.TransformBroadcaster()
 
 def box_filter(box, cloud, margin=0.0):
     size = box['size'] * (1 + margin)
@@ -35,25 +34,14 @@ def sequencial_box_filter(box_list, cloud, margin=0.0):
         cloud_remaining = cloud_remaining[~logical_indices, :]
     return cloud_decomposed_list
 
-def publish_object_state(cvhull2d, cloud):
-    center = list(np.mean(cloud, axis=0))
-
-    state = 'standing' if cvhull2d.area < 0.25 else 'falling'
-    print(state)
-    if state is 'falling':
-        hull_points = cloud[:, 0:2][cvhull2d.vertices]
-        rect = utils.minimum_bounding_rectangle(hull_points)
-        theta = utils.get_rotation_angle(rect)
-        q = quaternion_from_euler(0, 0, theta)
-        br.sendTransform(center, list(q), rospy.Time.now(), "can", "base_footprint")
-    else:
-        br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
 
 class ObjectObserver:
     def __init__(self):
         self.cloud = None
         self.sub1 = rospy.Subscriber('/vector_cloud', Cloud, self.callback_cloud)
         self.sub2 = rospy.Subscriber('/core/boxes', BoundingBoxArray, self.callback_bba)
+
+        self.br = tf.TransformBroadcaster()
 
         # filed for debuggin
         self.cloud_list = None
@@ -97,7 +85,21 @@ class ObjectObserver:
             if len(valid_idxes)==1:
                 cvhull2d = cvhull2d_list[valid_idxes[0]]
                 cloud = cloud_list[valid_idxes[0]]
-                publish_object_state(cvhull2d, cloud)
+                self.publish_object_state(cvhull2d, cloud)
+
+    def publish_object_state(self, cvhull2d, cloud):
+        center = list(np.mean(cloud, axis=0))
+
+        state = 'standing' if cvhull2d.area < 0.25 else 'falling'
+        print(state)
+        if state is 'falling':
+            hull_points = cloud[:, 0:2][cvhull2d.vertices]
+            rect = utils.minimum_bounding_rectangle(hull_points)
+            theta = utils.get_rotation_angle(rect)
+            q = quaternion_from_euler(0, 0, theta)
+            self.br.sendTransform(center, list(q), rospy.Time.now(), "can", "base_footprint")
+        else:
+            self.br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
 
 if __name__=='__main__':
     rospy.init_node("tmp", anonymous = True)
