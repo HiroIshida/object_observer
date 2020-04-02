@@ -28,6 +28,11 @@ def sequencial_box_filter(box_list, cloud, margin=0.0):
         cloud_remaining = cloud_remaining[~logical_indices, :]
     return cloud_decomposed_list
 
+def publish_object_state(cvhull):
+    print(cvhull.area)
+    state = 'standing' if cvhull.area < 0.01 else 'falling'
+    print(state)
+
 class ObjectObserver:
     def __init__(self):
         self.cloud = None
@@ -62,13 +67,18 @@ class ObjectObserver:
             cvhull_list = [scipy.spatial.ConvexHull(X) for X in cloud_list]
             area_list = [cvhull.area for cvhull in cvhull_list]
 
+            self.cloud_list = cloud_list
+            self.cvhull_list = cvhull_list
+
             valid_idxes = []
             n_box = len(box_list)
             for i in range(n_box):
                 if box_list[i]['pos'][2] < 0.95 and area_list[i] < 0.03:
                     valid_idxes.append(i)
 
-            print(valid_idxes)
+            if len(valid_idxes)==1:
+                cvhull = cvhull_list[valid_idxes[0]]
+                publish_object_state(cvhull)
 
 
 
