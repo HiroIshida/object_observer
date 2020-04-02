@@ -8,9 +8,10 @@ from copy import deepcopy
 import time
 import scipy.spatial
 
-def box_filter(box, cloud):
-    b_min = box['pos'] - box['size'] * 0.5
-    b_max = b_min + box['size']
+def box_filter(box, cloud, margin=0.0):
+    size = box['size'] * (1 + margin)
+    b_min = box['pos'] - size * 0.5
+    b_max = b_min + size
 
     logical_x = (b_min[0] < cloud[:, 0]) * (cloud[:, 0] < b_max[0])
     logical_y = (b_min[1] < cloud[:, 1]) * (cloud[:, 1] < b_max[1])
@@ -18,11 +19,11 @@ def box_filter(box, cloud):
     logical = logical_x * logical_y * logical_z
     return logical
 
-def sequencial_box_filter(box_list, cloud):
+def sequencial_box_filter(box_list, cloud, margin=0.0):
     cloud_decomposed_list = []
     cloud_remaining = deepcopy(cloud)
     for box in box_list:
-        logical_indices = box_filter(box, cloud_remaining)
+        logical_indices = box_filter(box, cloud_remaining, margin)
         cloud_decomposed_list.append(cloud_remaining[logical_indices, :]) 
         cloud_remaining = cloud_remaining[~logical_indices, :]
     return cloud_decomposed_list
@@ -61,7 +62,7 @@ class ObjectObserver:
         if self.cloud is None:
             return 
 
-        cloud_list = sequencial_box_filter(box_list, self.cloud)
+        cloud_list = sequencial_box_filter(box_list, self.cloud, margin = 0.5)
         cvhull_list = [scipy.spatial.ConvexHull(X) for X in cloud_list]
         area_list = [cvhull.area for cvhull in cvhull_list]
 
