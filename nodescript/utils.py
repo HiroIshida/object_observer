@@ -77,7 +77,7 @@ def get_rotation_angle(rect):
     else:
         axis = vec1_normal
 
-    theta = atan2(axis[1], axis[0]) % (pi/2)
+    theta = atan2(axis[1], axis[0]) % pi
     return theta
 
 
