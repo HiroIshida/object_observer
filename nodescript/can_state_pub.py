@@ -39,6 +39,7 @@ class ObjectObserver:
         self.sub2 = rospy.Subscriber('/core/boxes', BoundingBoxArray, self.callback_bba)
 
         self.pub_text = rospy.Publisher('object_status', OverlayText, queue_size=1)
+        self.pub_statuspose = rospy.Publisher('object_statuspose', StatusPose2d, queue_size=1)
 
         self.br = tf.TransformBroadcaster()
 
@@ -102,8 +103,13 @@ class ObjectObserver:
             theta = utils.get_rotation_angle(rect)
             q = quaternion_from_euler(0, 0, theta)
             self.br.sendTransform(center, list(q), rospy.Time.now(), "can", "base_footprint")
+
+            sp = StatusPose2d(x=center[0], y=center[1], theta=theta, status=state)
+            self.pub_statuspose.publish(sp)
         else:
             self.br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
+            sp = StatusPose2d(x=center[0], y=center[1], theta=0, status=state)
+            self.pub_statuspose.publish(sp)
 
     def publish_object_state_ifnotexist(self):
         text_status = OverlayText(text="missing")
