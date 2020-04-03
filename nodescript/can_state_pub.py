@@ -19,8 +19,7 @@ def box_filter(box, cloud, margin=0.0):
 
     logical_x = (b_min[0] < cloud[:, 0]) * (cloud[:, 0] < b_max[0])
     logical_y = (b_min[1] < cloud[:, 1]) * (cloud[:, 1] < b_max[1])
-    logical_z = (b_min[2] < cloud[:, 2]) * (cloud[:, 2] < b_max[2])
-    logical = logical_x * logical_y * logical_z
+    logical = logical_x * logical_y 
     return logical
 
 def sequencial_box_filter(box_list, cloud, margin=0.0):
