@@ -12,6 +12,28 @@ import tf
 from tf.transformations import quaternion_from_euler
 import utils
 
+class AverageQueue:
+    def __init__(self, N):
+        self.N = N
+        self.data = []
+
+    def push(self, elem):
+        self.data.append(elem)
+        if len(self.data) > self.N:
+            self.data = self.data[1:]
+
+    def isValid(self):
+        return len(self.data) == self.N
+
+    def mean(self):
+        if self.isValid():
+            return sum(self.data)/self.N
+        else:
+            return None
+
+    def clear(self):
+        self.data = []
+
 def box_filter(box, cloud, margin=0.0):
     size = box['size'] * (1 + margin)
     b_min = box['pos'] - size * 0.5
@@ -46,6 +68,7 @@ class ObjectObserver:
         # filed for debuggin
         self.cloud_list = None
         self.cvhull2d_list = None
+        self.aveque = AverageQueue(5) # only for filtering standing position
 
     def callback_cloud(self, msg):
         X = np.array(msg.x_array.data)
@@ -98,6 +121,7 @@ class ObjectObserver:
         self.pub_text.publish(text_status)
 
         if state is 'falling':
+            self.aveque.clear()
             hull_points = cloud[:, 0:2][cvhull2d.vertices]
             rect = utils.minimum_bounding_rectangle(hull_points)
             theta = utils.get_rotation_angle(rect)
@@ -106,12 +130,15 @@ class ObjectObserver:
 
             sp = StatusPose2d(x=center[0], y=center[1], theta=theta, status=state)
             self.pub_statuspose.publish(sp)
-        else:
-            self.br.sendTransform(center, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
-            sp = StatusPose2d(x=center[0], y=center[1], theta=0, status=state)
+        else: # standing
+            self.aveque.push(np.array(center))
+            center_average = self.aveque.mean().tolist()
+            self.br.sendTransform(center_average, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
+            sp = StatusPose2d(x=center_average[0], y=center_average[1], theta=0, status=state)
             self.pub_statuspose.publish(sp)
 
     def publish_object_state_ifnotexist(self):
+        self.aveque.clear()
         text_status = OverlayText(text="missing")
         self.pub_text.publish(text_status)
 
