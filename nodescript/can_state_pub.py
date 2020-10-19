@@ -132,6 +132,12 @@ class ObjectObserver:
             self.pub_statuspose.publish(sp)
         else: # standing
             self.aveque.push(np.array(center))
+            center_average = self.aveque.mean()
+            if center_average is None: 
+                # if the queue is not filled, then nothing will be published
+                return 
+            center_average = center_average.tolist()
+            sp = StatusPose2d(x=center_average[0], y=center_average[1], theta=0, status=state)
             center_average = self.aveque.mean().tolist()
             self.br.sendTransform(center_average, [0, 0, 0, 1], rospy.Time.now(), "can", "base_footprint")
             sp = StatusPose2d(x=center_average[0], y=center_average[1], theta=0, status=state)
