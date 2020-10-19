@@ -31,6 +31,9 @@ class AverageQueue:
         else:
             return None
 
+    def std(self):
+        return np.sqrt(np.var(np.vstack(self.data), axis=0))
+
     def clear(self):
         self.data = []
 
@@ -68,7 +71,7 @@ class ObjectObserver:
         # filed for debuggin
         self.cloud_list = None
         self.cvhull2d_list = None
-        self.aveque = AverageQueue(5) # only for filtering standing position
+        self.aveque = AverageQueue(8) # only for filtering standing position
 
     def callback_cloud(self, msg):
         X = np.array(msg.x_array.data)
@@ -133,6 +136,11 @@ class ObjectObserver:
         else: # standing
             self.aveque.push(np.array(center))
             center_average = self.aveque.mean()
+            center_std = self.aveque.std()
+            if np.max(center_std) > 0.005:
+                return False
+            #rospy.logdebug(center_std)
+
             if center_average is None: 
                 # if the queue is not filled, then nothing will be published
                 return 
