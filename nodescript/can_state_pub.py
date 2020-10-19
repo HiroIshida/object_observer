@@ -137,9 +137,11 @@ class ObjectObserver:
             self.aveque.push(np.array(center))
             center_average = self.aveque.mean()
             center_std = self.aveque.std()
-            if np.max(center_std) > 0.005:
-                return False
-            #rospy.logdebug(center_std)
+            uncertainty = np.max(center_std)
+            if uncertainty > 0.01:
+                self.aveque.clear()
+            elif uncertainty > 0.005:
+                return 
 
             if center_average is None: 
                 # if the queue is not filled, then nothing will be published
